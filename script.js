@@ -202,11 +202,14 @@
       const supabase = window.ANDREA_SUPABASE || {};
       const SUPABASE_SESSION_KEY = "andrea-portfolio-admin-session";
       const VISUAL_EDIT_SESSION_KEY = "andrea-portfolio-visual-editing";
-      const state = { db: null, projects: [], testimonials: [], remoteReviewsLoaded: false, services: [...defaultServices], siteCopy: {}, profile: { ...defaultProfile }, filter: "Todos", editingId: null, editingTestimonialId: null, editingServiceId: null, toastTimer: null, testimonialIndex: 0, testimonialTimer: null, testimonialObjectUrls: [], testimonialAdminObjectUrls: [] };
+      const state = { db: null, projects: [], testimonials: [], remoteReviewsLoaded: false, services: [...defaultServices], siteCopy: {}, profile: { ...defaultProfile }, filter: "Todos", projectIndex: 0, projectCarouselTimer: null, editingId: null, editingTestimonialId: null, editingServiceId: null, toastTimer: null, testimonialIndex: 0, testimonialTimer: null, testimonialObjectUrls: [], testimonialAdminObjectUrls: [] };
       state.visualCopy = {};
       state.visualImages = {};
       state.visualLinks = {};
+      state.visualImageStyles = {};
       state.visualPending = null;
+      state.selectedVisualImage = null;
+      state.siteContentSyncPending = false;
       const overlay = $("#adminOverlay"), content = $("#adminContent"), dialog = $("#projectDialog");
       const legacyProjects = [
         ["luna-botanica", "Luna Botánica", starterProjects[0]],
@@ -310,6 +313,11 @@
       }
       async function loadSiteContent() {
         if (!supabaseConfigured()) return;
+        const pending = await dbRequest("settings", "readonly", store => store.get("siteContentSyncPending"));
+        if (pending?.value?.pending) {
+          state.siteContentSyncPending = true;
+          return;
+        }
         try {
           const rows = await supabaseRequest("site_content?select=key,value");
           if (!Array.isArray(rows) || !rows.length) return;
@@ -320,6 +328,7 @@
           if (values.siteCopy && typeof values.siteCopy === "object") state.siteCopy = values.siteCopy;
           if (values.visualCopy && typeof values.visualCopy === "object") state.visualCopy = values.visualCopy;
           if (values.visualImages && typeof values.visualImages === "object") state.visualImages = values.visualImages;
+          if (values.visualImageStyles && typeof values.visualImageStyles === "object") state.visualImageStyles = values.visualImageStyles;
           if (values.visualLinks && typeof values.visualLinks === "object") state.visualLinks = values.visualLinks;
           await persistSiteContentLocally();
         } catch (error) {
@@ -333,6 +342,7 @@
           ["siteCopy", state.siteCopy],
           ["visualCopy", state.visualCopy],
           ["visualImages", state.visualImages],
+          ["visualImageStyles", state.visualImageStyles],
           ["visualLinks", state.visualLinks]
         ];
         await Promise.all(values.map(([key, value]) => dbRequest("settings", "readwrite", store => store.put({ key, value }))));
@@ -366,32 +376,42 @@
       }
       async function syncSiteContent() {
         if (!supabaseConfigured()) throw new Error("Configura Supabase y aplica supabase-schema.sql para sincronizar los cambios.");
-        state.profile.portrait = await publicImage(state.profile.portrait);
-        state.projects = await Promise.all(state.projects.map(async project => ({ ...project, image: await publicImage(project.image) })));
-        for (const [page, images] of Object.entries(state.visualImages)) {
-          state.visualImages[page] = Object.fromEntries(await Promise.all(
-            Object.entries(images).map(async ([selector, image]) => [selector, await publicImage(image)])
-          ));
-        }
         await persistSiteContentLocally();
-        const records = [
-          { key: "projects", value: state.projects },
-          { key: "services", value: state.services },
-          { key: "profile", value: state.profile },
-          { key: "siteCopy", value: state.siteCopy },
-          { key: "visualCopy", value: state.visualCopy },
-          { key: "visualImages", value: state.visualImages },
-          { key: "visualLinks", value: state.visualLinks }
-        ].map(record => ({ ...record, updated_at: new Date().toISOString() }));
         try {
+          state.siteContentSyncPending = true;
+          await dbRequest("settings", "readwrite", store => store.put({
+            key: "siteContentSyncPending",
+            value: { pending: true, updatedAt: Date.now() }
+          }));
+          state.projects = await Promise.all(state.projects.map(async project => ({ ...project, image: await publicImage(project.image) })));
+          state.profile = { ...state.profile, portrait: await publicImage(state.profile.portrait) };
+          state.visualImages = Object.fromEntries(await Promise.all(Object.entries(state.visualImages).map(async ([page, images]) => [
+            page,
+            Object.fromEntries(await Promise.all(Object.entries(images).map(async ([selector, image]) => [selector, await publicImage(image)])))
+          ])));
+          await persistSiteContentLocally();
+          const records = [
+            { key: "projects", value: state.projects },
+            { key: "services", value: state.services },
+            { key: "profile", value: state.profile },
+            { key: "siteCopy", value: state.siteCopy },
+            { key: "visualCopy", value: state.visualCopy },
+            { key: "visualImages", value: state.visualImages },
+            { key: "visualImageStyles", value: state.visualImageStyles },
+            { key: "visualLinks", value: state.visualLinks }
+          ].map(record => ({ ...record, updated_at: new Date().toISOString() }));
           await supabaseRequest("site_content?on_conflict=key", {
             method: "POST",
             authenticated: true,
             prefer: "resolution=merge-duplicates,return=minimal",
             body: records
           });
+          state.siteContentSyncPending = false;
+          await dbRequest("settings", "readwrite", store => store.delete("siteContentSyncPending"));
         } catch (error) {
-          throw new Error(`Los cambios quedaron guardados en este dispositivo, pero no se sincronizaron con la página publicada: ${error.message}`);
+          const pendingError = new Error(error.message);
+          pendingError.localSaved = true;
+          throw pendingError;
         }
       }
       async function supabaseAccessToken(authenticated = false) {
@@ -569,7 +589,7 @@
         if (savedServices && Array.isArray(savedServices.value)) state.services = savedServices.value;
         const savedCopy = await dbRequest("settings", "readonly", store => store.get("siteCopy"));
         if (savedCopy && savedCopy.value && typeof savedCopy.value === "object") state.siteCopy = savedCopy.value;
-        for (const key of ["visualCopy", "visualImages", "visualLinks"]) {
+        for (const key of ["visualCopy", "visualImages", "visualImageStyles", "visualLinks"]) {
           const savedValue = await dbRequest("settings", "readonly", store => store.get(key));
           if (savedValue && savedValue.value && typeof savedValue.value === "object") state[key] = savedValue.value;
         }
@@ -580,6 +600,15 @@
         renderServices();
         renderTestimonials();
         applyVisualSavedContent();
+        if (state.siteContentSyncPending && readAdminSession()) {
+          try {
+            await assertReviewAdmin();
+            await syncSiteContent();
+            showToast("Los cambios que estaban pendientes ya se sincronizaron.");
+          } catch (error) {
+            showToast(`Los cambios siguen guardados en este dispositivo, pero no se sincronizaron: ${error.message}`, true);
+          }
+        }
       }
       function showToast(message, isError = false) {
         const toast = $("#toast");
@@ -640,6 +669,11 @@
       function renderProjects() {
         const grid = $("#projectsGrid");
         if (!grid) return;
+        const isHomeCarousel = visualPageKey() === "index.html";
+        grid.classList.toggle("home-project-carousel", isHomeCarousel);
+        const carouselControls = $("#projectCarouselControls");
+        if (carouselControls) carouselControls.hidden = !isHomeCarousel || state.projects.length < 2;
+        window.clearInterval(state.projectCarouselTimer);
         const categories = ["Todos", ...new Set(state.projects.map(project => project.category).filter(Boolean))];
         const filters = $("#projectFilters");
         if (filters) {
@@ -655,6 +689,7 @@
         }
         grid.replaceChildren();
         const projects = state.projects.filter(project => state.filter === "Todos" || project.category === state.filter);
+        if (state.projectIndex >= projects.length) state.projectIndex = 0;
         if (!projects.length) {
           const empty = document.createElement("div");
           empty.className = "empty-projects";
@@ -665,7 +700,10 @@
         projects.forEach((project, index) => {
           const card = document.createElement("article");
           card.className = "project-card reveal visible interactive-card";
+          if (isHomeCarousel) card.classList.add("project-carousel-card");
           card.dataset.projectId = project.id;
+          card.setAttribute("aria-hidden", String(isHomeCarousel && index !== state.projectIndex));
+          if (isHomeCarousel && index !== state.projectIndex) card.hidden = true;
           card.style.animationDelay = `${Math.min(index * 80, 400)}ms`;
           const image = document.createElement("div");
           image.className = "project-image";
@@ -691,6 +729,54 @@
           card.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openProject(project); } });
           grid.append(card);
           bindInteractiveGlow(card);
+        });
+        if (isHomeCarousel) {
+          renderProjectCarousel(projects.length);
+          if (projects.length > 1 && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            state.projectCarouselTimer = window.setInterval(() => showProject(state.projectIndex + 1), 6500);
+          }
+        }
+      }
+      function renderProjectCarousel(count) {
+        const dots = $("#projectDots");
+        if (!dots) return;
+        dots.replaceChildren();
+        for (let index = 0; index < count; index += 1) {
+          const dot = document.createElement("button");
+          dot.type = "button";
+          dot.className = `testimonial-dot${index === state.projectIndex ? " active" : ""}`;
+          dot.setAttribute("aria-label", `Mostrar proyecto ${index + 1} de ${count}`);
+          dot.setAttribute("aria-current", String(index === state.projectIndex));
+          dot.addEventListener("click", () => showProject(index));
+          dots.append(dot);
+        }
+        $("#projectPrevious").onclick = () => showProject(state.projectIndex - 1);
+        $("#projectNext").onclick = () => showProject(state.projectIndex + 1);
+        const grid = $("#projectsGrid");
+        if (grid && !grid.dataset.swipeBound) {
+          grid.dataset.swipeBound = "true";
+          let startX = 0;
+          grid.addEventListener("pointerdown", event => { startX = event.clientX; });
+          grid.addEventListener("pointerup", event => {
+            if (Math.abs(event.clientX - startX) < 45 || event.target.closest("a, button, [contenteditable='plaintext-only']")) return;
+            showProject(state.projectIndex + (event.clientX < startX ? 1 : -1));
+          });
+        }
+      }
+      function showProject(index) {
+        const cards = $$(".project-carousel-card", $("#projectsGrid"));
+        if (!cards.length) return;
+        state.projectIndex = (index + cards.length) % cards.length;
+        cards.forEach((card, position) => {
+          const active = position === state.projectIndex;
+          card.hidden = !active;
+          card.setAttribute("aria-hidden", String(!active));
+          card.classList.toggle("active", active);
+        });
+        $$(".testimonial-dot", $("#projectDots")).forEach((dot, position) => {
+          const active = position === state.projectIndex;
+          dot.classList.toggle("active", active);
+          dot.setAttribute("aria-current", String(active));
         });
       }
       function renderServices() {
@@ -777,6 +863,7 @@
             image.className = "testimonial-image";
             image.src = testimonial.imageUrl || URL.createObjectURL(testimonial.image);
             image.alt = `Imagen compartida por ${testimonial.name}`;
+            image.dataset.testimonialImage = String(testimonial.id);
             if (testimonial.image) state.testimonialObjectUrls.push(image.src);
             card.append(image);
           }
@@ -918,7 +1005,8 @@
         for (const [attribute, value] of [
           ["data-site-copy", element.dataset.siteCopy],
           ["data-profile", element.dataset.profile],
-          ["data-visual-image", element.dataset.visualImage]
+          ["data-visual-image", element.dataset.visualImage],
+          ["data-testimonial-image", element.dataset.testimonialImage]
         ]) {
           if (!value) continue;
           const selector = `[${attribute}="${CSS.escape(value)}"]`;
@@ -934,6 +1022,12 @@
         }
         return `body > ${parts.join(" > ")}`;
       }
+      function visualImageStyleKey(image) {
+        if (image.dataset.projectImage) return `project:${image.dataset.projectImage}`;
+        if (image.dataset.testimonialImage) return `testimonial:${image.dataset.testimonialImage}`;
+        if (image.closest(".portrait, .profile-portrait")) return "profile:portrait";
+        return `page:${visualPageKey()}:${visualSelectorFor(image)}`;
+      }
       function applyVisualSavedContent() {
         const page = visualPageKey();
         Object.entries(state.visualCopy[page] || {}).forEach(([selector, text]) => {
@@ -947,6 +1041,12 @@
         Object.entries(state.visualLinks[page] || {}).forEach(([selector, href]) => {
           const element = $(selector);
           if (element instanceof HTMLAnchorElement) element.href = href;
+        });
+        $$("img").forEach(image => {
+          const style = state.visualImageStyles[visualImageStyleKey(image)];
+          if (!style) return;
+          if (style.position) image.style.objectPosition = style.position;
+          if (style.fit) image.style.objectFit = style.fit;
         });
       }
       function visualHasChanges() {
@@ -971,13 +1071,29 @@
         element.classList.add("visual-edited");
       }
       function selectVisualImage(image) {
-        const input = $("#visualImageInput");
-        if (!input) return;
-        input.dataset.targetSelector = visualSelectorFor(image);
-        input.dataset.profileImage = String(Boolean(image.closest(".portrait, .profile-portrait")));
-        input.dataset.projectId = image.dataset.projectImage || "";
-        input.value = "";
-        input.click();
+        state.selectedVisualImage = image;
+        const key = visualImageStyleKey(image);
+        const style = state.visualPending?.imageStyles[key] || state.visualImageStyles[key] || {};
+        const [positionX, positionY] = (style.position || "50% 50%").split(/\s+/).map(value => Number.parseInt(value, 10));
+        $("#visualImagePositionX").value = String(Number.isFinite(positionX) ? positionX : 50);
+        $("#visualImagePositionY").value = String(Number.isFinite(positionY) ? positionY : 50);
+        $("#visualImageFit").value = style.fit || "cover";
+        $("#visualImageControls").hidden = false;
+        image.classList.add("visual-image-selected");
+        $("#visualEditStatus").textContent = "Imagen seleccionada: ajusta el encuadre o reemplázala.";
+      }
+      function updateSelectedImageStyle() {
+        const image = state.selectedVisualImage;
+        if (!image || !image.isConnected) return;
+        const key = visualImageStyleKey(image);
+        const style = {
+          position: `${$("#visualImagePositionX").value}% ${$("#visualImagePositionY").value}%`,
+          fit: $("#visualImageFit").value
+        };
+        image.style.objectPosition = style.position;
+        image.style.objectFit = style.fit;
+        state.visualPending.imageStyles[key] = style;
+        $("#visualEditStatus").textContent = "Hay cambios sin guardar.";
       }
       async function saveVisualEdits() {
         const pending = state.visualPending;
@@ -990,9 +1106,10 @@
           const page = visualPageKey();
           state.visualCopy[page] = { ...(state.visualCopy[page] || {}), ...pending.content };
           state.visualImages[page] = { ...(state.visualImages[page] || {}), ...pending.images };
+          state.visualImageStyles = { ...state.visualImageStyles, ...pending.imageStyles };
           state.visualLinks[page] = { ...(state.visualLinks[page] || {}), ...pending.links };
           await syncSiteContent();
-          state.visualPending = { copy: {}, profile: {}, projects: {}, services: {}, content: {}, images: {}, links: {} };
+          state.visualPending = { copy: {}, profile: {}, projects: {}, services: {}, content: {}, images: {}, imageStyles: {}, links: {} };
           renderSiteCopy();
           renderProfile();
           renderProjects();
@@ -1001,19 +1118,31 @@
           $("#visualEditStatus").textContent = "Cambios guardados y sincronizados.";
           showToast("Cambios guardados y sincronizados.");
         } catch (error) {
+          if (error.localSaved) {
+            state.visualPending = { copy: {}, profile: {}, projects: {}, services: {}, content: {}, images: {}, imageStyles: {}, links: {} };
+            renderSiteCopy();
+            renderProfile();
+            renderProjects();
+            renderServices();
+            applyVisualSavedContent();
+            $("#visualEditStatus").textContent = "Guardado en este dispositivo; sincronización pendiente.";
+            showToast(`Guardado en este dispositivo. No se pudo sincronizar: ${error.message}`, true);
+            return;
+          }
           showToast(`No se pudieron guardar los cambios: ${error.message}`, true);
         }
       }
       function startVisualEditor() {
         try { sessionStorage.setItem(VISUAL_EDIT_SESSION_KEY, "1"); }
         catch (error) { showToast(`No se pudo activar la edición visual: ${error.message}`, true); return; }
+        window.clearInterval(state.projectCarouselTimer);
         closeAdmin();
         document.body.classList.add("visual-edit-mode");
-        state.visualPending = { copy: {}, profile: {}, projects: {}, services: {}, content: {}, images: {}, links: {} };
+        state.visualPending = { copy: {}, profile: {}, projects: {}, services: {}, content: {}, images: {}, imageStyles: {}, links: {} };
         const toolbar = document.createElement("div");
         toolbar.id = "visualEditToolbar";
         toolbar.className = "visual-edit-toolbar";
-        toolbar.innerHTML = `<div class="visual-edit-message"><strong>Edición visual</strong><span>Pulsa un texto para editarlo o una imagen para reemplazarla; Alt + clic cambia un enlace.</span></div><label class="visual-edit-navigation">Ver página<select id="visualPageSelect">${visualPages.map(([label, path]) => `<option value="${path}">${label}</option>`).join("")}</select></label><span id="visualEditStatus" class="visual-edit-status" role="status">Sin cambios pendientes.</span><div class="visual-edit-actions"><button type="button" id="visualCancelButton">Cancelar</button><button type="button" id="visualSaveButton">Guardar</button></div>`;
+        toolbar.innerHTML = `<div class="visual-edit-message"><strong>Edición visual</strong><span>Pulsa textos o imágenes; puedes ajustar el encuadre y reemplazarlas.</span></div><label class="visual-edit-navigation">Ver página<select id="visualPageSelect">${visualPages.map(([label, path]) => `<option value="${path}">${label}</option>`).join("")}</select></label><div class="visual-image-controls" id="visualImageControls" hidden><label>Encuadre horizontal <input type="range" id="visualImagePositionX" min="0" max="100" value="50"></label><label>Encuadre vertical <input type="range" id="visualImagePositionY" min="0" max="100" value="50"></label><label>Ajuste<select id="visualImageFit"><option value="cover">Rellenar</option><option value="contain">Mostrar completa</option></select></label><button type="button" id="visualReplaceImage">Cambiar imagen</button></div><span id="visualEditStatus" class="visual-edit-status" role="status">Sin cambios pendientes.</span><div class="visual-edit-actions"><button type="button" id="visualCancelButton">Cancelar</button><button type="button" id="visualSaveButton">Guardar</button></div>`;
         document.body.append(toolbar);
         $("#visualPageSelect").value = `./${visualPageKey()}`;
         const imageInput = document.createElement("input");
@@ -1022,11 +1151,24 @@
         imageInput.accept = "image/jpeg,image/png,image/webp,image/gif";
         imageInput.hidden = true;
         document.body.append(imageInput);
+        $("#visualReplaceImage").addEventListener("click", () => {
+          const image = state.selectedVisualImage;
+          if (!image) return;
+          imageInput.dataset.targetSelector = visualSelectorFor(image);
+          imageInput.dataset.profileImage = String(Boolean(image.closest(".portrait, .profile-portrait")));
+          imageInput.dataset.projectId = image.dataset.projectImage || "";
+          imageInput.value = "";
+          imageInput.click();
+        });
+        ["#visualImagePositionX", "#visualImagePositionY", "#visualImageFit"].forEach(selector => {
+          $(selector).addEventListener("input", updateSelectedImageStyle);
+          $(selector).addEventListener("change", updateSelectedImageStyle);
+        });
         imageInput.addEventListener("change", () => {
           const file = imageInput.files[0];
           if (!file) return;
-          if (file.size > 5 * 1024 * 1024) {
-            showToast("Elige una imagen de máximo 5 MB.", true);
+          if (!file.type.startsWith("image/") || file.size > 8 * 1024 * 1024) {
+            showToast("Elige una imagen JPG, PNG, WebP o GIF de máximo 8 MB.", true);
             return;
           }
           const reader = new FileReader();
@@ -1047,6 +1189,7 @@
             } else {
               state.visualPending.images[visualSelectorFor(image)] = reader.result;
             }
+            updateSelectedImageStyle();
             image.classList.add("visual-edited");
             $("#visualEditStatus").textContent = "Hay cambios sin guardar.";
           };
@@ -1073,6 +1216,7 @@
           const target = event.target instanceof Element ? event.target : null;
           if (!target || target.closest("input, textarea, select, form, .admin-overlay, [aria-hidden='true']")) return;
           if (target.closest(".project-dialog-close")) return;
+          if (target.closest("#projectPrevious, #projectNext, #projectDots")) return;
           if (event.altKey) {
             const link = target.closest("a");
             if (link) {
@@ -1093,7 +1237,7 @@
               return;
             }
           }
-          const image = target.closest("img[data-visual-image], img[data-project-image], .portrait img, .profile-portrait img");
+          const image = target.closest("img[data-visual-image], img[data-project-image], img[data-testimonial-image], .portrait img, .profile-portrait img");
           if (image) {
             event.preventDefault();
             event.stopPropagation();
@@ -1907,6 +2051,140 @@
           card.style.removeProperty("--pointer-y");
         });
       }
+      function installPageTransition() {
+        const transition = document.createElement("div");
+        transition.className = "page-transition is-active";
+        transition.id = "pageTransition";
+        transition.setAttribute("aria-hidden", "true");
+        transition.innerHTML = `<span class="page-transition-star"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="43"/><path d="M50 12 72 82 14 39h72L28 82 50 12Z"/></svg></span><span class="page-transition-name">ANDREA</span><span class="page-transition-caption">DISEÑO CON INTENCIÓN</span>`;
+        document.body.append(transition);
+        window.setTimeout(() => {
+          transition.classList.remove("is-active");
+          window.setTimeout(() => transition.remove(), 650);
+        }, reduceMotion ? 0 : 520);
+        document.addEventListener("click", event => {
+          if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          if (document.body.classList.contains("visual-edit-mode")) return;
+          const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;
+          if (!anchor || anchor.target && anchor.target !== "_self" || anchor.hasAttribute("download")) return;
+          let destination;
+          try { destination = new URL(anchor.href, location.href); }
+          catch { return; }
+          if (destination.origin !== location.origin || destination.pathname === location.pathname || destination.hash && destination.pathname === location.pathname) return;
+          event.preventDefault();
+          transition.classList.add("is-active", "is-leaving");
+          window.setTimeout(() => location.assign(destination.href), reduceMotion ? 0 : 260);
+        }, true);
+      }
+      function installInteractionSounds() {
+        const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+        let audioContext = null;
+        let audioReady = null;
+        let ambientGain = null;
+        let ambientPulseDepth = null;
+        let ambientStarted = false;
+        let audioErrorReported = false;
+        const reportAudioError = error => {
+          if (audioErrorReported) return;
+          audioErrorReported = true;
+          showToast(`No se pudo iniciar el sonido ambiental: ${error.message}`, true);
+        };
+        const startAmbient = () => {
+          if (ambientStarted) return;
+          ambientStarted = true;
+          const now = audioContext.currentTime;
+          const output = audioContext.createGain();
+          const filter = audioContext.createBiquadFilter();
+          ambientGain = audioContext.createGain();
+          output.gain.value = 0.72;
+          filter.type = "lowpass";
+          filter.frequency.value = 850;
+          ambientGain.gain.setValueAtTime(0.0001, now);
+          ambientGain.gain.setTargetAtTime(document.hidden ? 0.0001 : 0.105, now, 1.8);
+          filter.connect(ambientGain);
+          ambientGain.connect(output);
+          output.connect(audioContext.destination);
+          [[110, "triangle", 0.17], [164.81, "sine", 0.085], [220, "triangle", 0.04], [329.63, "sine", 0.018]].forEach(([frequency, type, volume]) => {
+            const oscillator = audioContext.createOscillator();
+            const voice = audioContext.createGain();
+            oscillator.type = type;
+            oscillator.frequency.value = frequency;
+            voice.gain.value = volume;
+            oscillator.connect(voice);
+            voice.connect(filter);
+            oscillator.start(now);
+          });
+          const pulse = audioContext.createOscillator();
+          ambientPulseDepth = audioContext.createGain();
+          pulse.frequency.value = 0.09;
+          ambientPulseDepth.gain.value = document.hidden ? 0 : 0.012;
+          pulse.connect(ambientPulseDepth);
+          ambientPulseDepth.connect(ambientGain.gain);
+          pulse.start(now);
+        };
+        const startAudio = () => {
+          if (!AudioContextConstructor) return Promise.resolve(false);
+          if (audioReady) return audioReady;
+          audioReady = (async () => {
+            audioContext ||= new AudioContextConstructor();
+            if (audioContext.state === "suspended") await audioContext.resume();
+            startAmbient();
+            return true;
+          })().catch(error => {
+            audioReady = null;
+            throw error;
+          });
+          return audioReady;
+        };
+        const playTone = (frequency, startAt, duration, volume, type = "sine") => {
+          const oscillator = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          oscillator.type = type;
+          oscillator.frequency.setValueAtTime(frequency, startAt);
+          gain.gain.setValueAtTime(0.0001, startAt);
+          gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+          oscillator.connect(gain);
+          gain.connect(audioContext.destination);
+          oscillator.start(startAt);
+          oscillator.stop(startAt + duration + 0.015);
+        };
+        const playCue = notes => {
+          const now = audioContext.currentTime;
+          notes.forEach(([frequency, delay, duration, volume, type]) => {
+            playTone(frequency, now + delay, duration, volume, type);
+          });
+        };
+        const unlockAudio = () => {
+          if (document.body.classList.contains("visual-edit-mode")) return;
+          document.removeEventListener("pointerdown", unlockAudio);
+          document.removeEventListener("keydown", unlockAudio);
+          startAudio().catch(reportAudioError);
+        };
+        document.addEventListener("pointerdown", unlockAudio, { passive: true });
+        document.addEventListener("keydown", unlockAudio);
+        document.addEventListener("visibilitychange", () => {
+          if (!ambientGain || !audioContext || audioContext.state !== "running") return;
+          ambientGain.gain.setTargetAtTime(document.hidden ? 0.0001 : 0.105, audioContext.currentTime, 1.5);
+          ambientPulseDepth.gain.setTargetAtTime(document.hidden ? 0 : 0.012, audioContext.currentTime, 1);
+        });
+        document.addEventListener("click", event => {
+          if (document.body.classList.contains("visual-edit-mode")) return;
+          const target = event.target instanceof Element ? event.target : null;
+          const control = target?.closest("a[href], button, .project-card, .service-card");
+          if (!control || control.matches(":disabled, [aria-disabled='true']")) return;
+          const notes = control.closest(".project-card")
+            ? [[293.66, 0, 0.2, 0.025], [349.23, 0.07, 0.24, 0.02], [440, 0.14, 0.32, 0.017]]
+            : control.closest(".testimonial-controls, .project-carousel-controls, .testimonial-dots, .filters")
+              ? [[349.23, 0, 0.12, 0.018], [440, 0.045, 0.17, 0.014]]
+              : control.matches(".project-dialog-close")
+                ? [[440, 0, 0.12, 0.018], [329.63, 0.055, 0.2, 0.016]]
+                : control.matches("a[href]")
+                  ? [[392, 0, 0.18, 0.02], [523.25, 0.065, 0.24, 0.016], [659.25, 0.13, 0.3, 0.012]]
+                  : [[293.66, 0, 0.1, 0.016, "triangle"], [392, 0.04, 0.14, 0.013]];
+          startAudio().then(ready => { if (ready) playCue(notes); }).catch(reportAudioError);
+        }, true);
+      }
       $$(".interactive-card, .service-card, .value-card").forEach(card => {
         card.classList.add("interactive-card");
         bindInteractiveGlow(card);
@@ -1932,6 +2210,8 @@
         window.addEventListener("resize", updateScrollProgress);
         updateScrollProgress();
       }
+      installPageTransition();
+      installInteractionSounds();
       loadData().then(async () => {
         if (sessionStorage.getItem(VISUAL_EDIT_SESSION_KEY) !== "1") return;
         try {
