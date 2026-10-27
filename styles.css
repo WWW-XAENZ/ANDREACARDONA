@@ -855,6 +855,10 @@
       .project-carousel-controls .testimonial-arrow { width: 36px; height: 36px; }
       .project-carousel-controls .testimonial-dots { gap: 7px; }
       .project-carousel-controls .testimonial-dot { width: 7px; height: 7px; }
+      .testimonial-card.has-image { grid-template-columns: minmax(0, 1fr); }
+      .testimonial-image { width: 100%; height: clamp(190px, 64vw, 300px); min-height: 0; object-fit: contain; object-position: center; }
+      .testimonial-card-body { padding: 32px 22px 24px; }
+      .testimonial-card blockquote { margin: 42px 0 20px; font-size: 18px; line-height: 1.55; }
       .about { padding-block: 60px; }
       .portrait-wrap { width: min(88%, 330px); }
       .portrait { height: clamp(320px, 105vw, 410px); }
