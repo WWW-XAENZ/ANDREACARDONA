@@ -2080,47 +2080,11 @@
         const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
         let audioContext = null;
         let audioReady = null;
-        let ambientGain = null;
-        let ambientPulseDepth = null;
-        let ambientStarted = false;
         let audioErrorReported = false;
         const reportAudioError = error => {
           if (audioErrorReported) return;
           audioErrorReported = true;
           showToast(`No se pudo iniciar el sonido ambiental: ${error.message}`, true);
-        };
-        const startAmbient = () => {
-          if (ambientStarted) return;
-          ambientStarted = true;
-          const now = audioContext.currentTime;
-          const output = audioContext.createGain();
-          const filter = audioContext.createBiquadFilter();
-          ambientGain = audioContext.createGain();
-          output.gain.value = 0.72;
-          filter.type = "lowpass";
-          filter.frequency.value = 850;
-          ambientGain.gain.setValueAtTime(0.0001, now);
-          ambientGain.gain.setTargetAtTime(document.hidden ? 0.0001 : 0.105, now, 1.8);
-          filter.connect(ambientGain);
-          ambientGain.connect(output);
-          output.connect(audioContext.destination);
-          [[110, "triangle", 0.17], [164.81, "sine", 0.085], [220, "triangle", 0.04], [329.63, "sine", 0.018]].forEach(([frequency, type, volume]) => {
-            const oscillator = audioContext.createOscillator();
-            const voice = audioContext.createGain();
-            oscillator.type = type;
-            oscillator.frequency.value = frequency;
-            voice.gain.value = volume;
-            oscillator.connect(voice);
-            voice.connect(filter);
-            oscillator.start(now);
-          });
-          const pulse = audioContext.createOscillator();
-          ambientPulseDepth = audioContext.createGain();
-          pulse.frequency.value = 0.09;
-          ambientPulseDepth.gain.value = document.hidden ? 0 : 0.012;
-          pulse.connect(ambientPulseDepth);
-          ambientPulseDepth.connect(ambientGain.gain);
-          pulse.start(now);
         };
         const startAudio = () => {
           if (!AudioContextConstructor) return Promise.resolve(false);
@@ -2128,7 +2092,6 @@
           audioReady = (async () => {
             audioContext ||= new AudioContextConstructor();
             if (audioContext.state === "suspended") await audioContext.resume();
-            startAmbient();
             return true;
           })().catch(error => {
             audioReady = null;
@@ -2163,11 +2126,6 @@
         };
         document.addEventListener("pointerdown", unlockAudio, { passive: true });
         document.addEventListener("keydown", unlockAudio);
-        document.addEventListener("visibilitychange", () => {
-          if (!ambientGain || !audioContext || audioContext.state !== "running") return;
-          ambientGain.gain.setTargetAtTime(document.hidden ? 0.0001 : 0.105, audioContext.currentTime, 1.5);
-          ambientPulseDepth.gain.setTargetAtTime(document.hidden ? 0 : 0.012, audioContext.currentTime, 1);
-        });
         document.addEventListener("click", event => {
           if (document.body.classList.contains("visual-edit-mode")) return;
           const target = event.target instanceof Element ? event.target : null;
