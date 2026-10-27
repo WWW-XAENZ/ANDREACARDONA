@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111112">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <meta name="description" content="Andrea, diseñadora gráfica independiente. Identidad visual, branding, diseño editorial y dirección de arte con carácter.">
+  <title>Andrea — Diseñadora gráfica</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+  <header class="topbar">
+    <nav class="nav wrap" aria-label="Navegación principal">
+      <div class="brand">
+        <button class="brand-mark" id="brandAdmin" type="button" aria-label="Monograma de Andrea: pulsa cinco veces seguidas para abrir el administrador" title="Cinco pulsaciones para el acceso privado">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="brand-star-ring" cx="50" cy="50" r="43"/><path class="brand-star-glyph" d="M50 12 72 82 14 39h72L28 82 50 12Z"/></svg>
+        </button>
+        <div class="brand-lockup"><a class="brand-name" href="#inicio" aria-label="Andrea, inicio" data-profile="name">ANDREA</a><span class="brand-caption">DISEÑO GRÁFICO</span></div>
+        <span class="sr-only" id="adminHint" aria-live="polite"></span>
+      </div>
+      <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">☰</button>
+      <div class="nav-links" id="navLinks">
+        <a href="./proyectos.html" data-site-copy="navProjects">Proyectos</a><a href="./servicios.html" data-site-copy="navServices">Servicios</a><a href="./sobre-mi.html" data-site-copy="navAbout">Sobre mí</a><a href="./contacto.html" data-site-copy="navContact">Contacto</a>
+        <a class="nav-cta" href="https://wa.me/573113352580" target="_blank" rel="noreferrer"><span data-site-copy="navCta">Hablemos</span> <span aria-hidden="true">↗</span></a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero wrap" id="inicio">
+      <div class="hero-copy">
+        <div class="eyebrow" data-profile="role">Diseñadora gráfica independiente</div>
+        <h1><span data-site-copy="heroLine1">IDEAS CON</span><br><em data-site-copy="heroLine2">IDENTIDAD.</em><br><span data-site-copy="heroLine3">DISEÑO CON</span><br><em data-site-copy="heroLine4">ACTITUD.</em></h1>
+        <p class="hero-description" data-profile="intro">Diseño identidades visuales y piezas gráficas con concepto, personalidad y una estética que no pasa desapercibida.</p>
+        <div class="hero-actions">
+          <a class="button-dark" href="#proyectos"><span data-site-copy="heroCta">Explorar proyectos</span> <span>↘</span></a>
+          <div class="availability"><i></i><span data-site-copy="heroAvailability">Branding · Editorial · Arte</span></div>
+        </div>
+      </div>
+      <div class="hero-art" aria-label="Composición visual creativa">
+        <span class="scribble" aria-hidden="true" data-site-copy="heroScribble">DESDE LA IDEA</span>
+        <div class="art-main"><img data-visual-image="hero-main" src="https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1100&q=85" alt="Composición abstracta para inspirar una identidad gráfica"></div>
+        <div class="art-sticker" data-site-copy="heroSticker">IDEAS<br>CON<br>IDENTIDAD ✳</div>
+        <div class="art-note"><span data-site-copy="heroNoteLabel">Mi enfoque</span><strong data-site-copy="heroNoteTitle">concepto<br>con carácter</strong></div>
+        <div class="art-small"><img data-visual-image="hero-detail" src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=400&q=80" alt="Cuaderno y herramientas para desarrollar una idea gráfica"></div>
+      </div>
+    </section>
+
+    <div class="ticker" aria-hidden="true"><div class="ticker-track">
+      <span data-site-copy="tickerOne">Identidad visual</span><span class="star">✳</span><span data-site-copy="tickerTwo">Diseño editorial</span><span class="star">✳</span><span data-site-copy="tickerThree">Dirección de arte</span><span class="star">✳</span><span data-site-copy="tickerFour">Ideas con carácter</span><span class="star">✳</span>
+      <span data-site-copy="tickerOne">Identidad visual</span><span class="star">✳</span><span data-site-copy="tickerTwo">Diseño editorial</span><span class="star">✳</span><span data-site-copy="tickerThree">Dirección de arte</span><span class="star">✳</span><span data-site-copy="tickerFour">Ideas con carácter</span><span class="star">✳</span>
+    </div></div>
+
+    <section class="manifesto" aria-labelledby="manifestoTitle">
+      <div class="manifesto-inner wrap">
+        <span class="manifesto-index">A / 001</span>
+        <div>
+          <p class="eyebrow" data-site-copy="manifestoEyebrow">Diseño con intención</p>
+          <h2 id="manifestoTitle"><span data-site-copy="manifestoTitleOne">Una idea encuentra forma.</span><br><em data-site-copy="manifestoTitleTwo">Una marca encuentra su voz.</em></h2>
+        </div>
+        <p class="manifesto-copy" data-site-copy="homeManifesto">Creo conceptos visuales que convierten ideas en identidades memorables: estrategia, tipografía y una estética oscura con carácter propio.</p>
+        <span class="manifesto-star" aria-hidden="true">✳</span>
+      </div>
+    </section>
+
+    <section class="section wrap" id="proyectos">
+      <div class="section-heading reveal">
+        <div><div class="eyebrow" data-site-copy="projectsEyebrow">Conceptos gráficos · Proyectos de muestra</div><h2><span data-site-copy="projectsTitleOne">Diseño que</span><br><em data-site-copy="projectsTitleTwo">deja huella.</em></h2></div>
+        <p class="section-aside" data-site-copy="homeProjects">Una muestra de identidad de marca, dirección de arte y diseño editorial. Desde el panel puedes sustituir estos conceptos por sus proyectos reales.</p>
+      </div>
+      <div class="filters" id="projectFilters" aria-label="Filtrar proyectos"></div>
+      <div class="projects-grid" id="projectsGrid" aria-live="polite"></div>
+    </section>
+
+    <section class="about" id="sobre-mi">
+      <div class="about-grid wrap">
+        <div class="portrait-wrap reveal">
+          <div class="portrait"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=85" alt="Retrato de referencia para la diseñadora gráfica Andrea"></div>
+          <div class="portrait-caption">⛤ Andrea</div>
+        </div>
+        <div class="about-copy reveal">
+          <div class="eyebrow" data-site-copy="aboutEyebrow">Andrea · Diseñadora gráfica</div>
+          <h2><span data-site-copy="aboutTitleOne">Diseño para</span><br><em data-site-copy="aboutTitleTwo">decir algo.</em></h2>
+          <p data-profile="bio">Soy diseñadora gráfica y convierto ideas en sistemas visuales con personalidad. Trabajo entre el branding, la dirección de arte y el diseño editorial, con una estética contemporánea, oscura y llena de intención.</p>
+          <div class="services"><span>Identidad visual</span><span>Branding</span><span>Diseño editorial</span><span>Dirección de arte</span><span>Diseño para redes</span><span>Packaging</span></div>
+          <div class="about-stats"><div class="stat"><strong>01</strong><span data-site-copy="statsOneTitle">Concepto</span></div><div class="stat"><strong>02</strong><span data-site-copy="statsTwoTitle">Lenguaje visual</span></div><div class="stat"><strong>03</strong><span data-site-copy="statsThreeTitle">Diseño final</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="testimonials-section" aria-labelledby="testimonialsTitle">
+      <div class="wrap testimonials-inner">
+        <div class="testimonials-heading reveal">
+          <span class="eyebrow" data-site-copy="testimonialEyebrow">Comentarios / Experiencias reales</span>
+          <h2 id="testimonialsTitle"><span data-site-copy="testimonialTitleOne">Las ideas se crean</span><br><em data-site-copy="testimonialTitleTwo">en equipo.</em></h2>
+          <p data-site-copy="homeTestimonials">Los testimonios se publicarán únicamente cuando un cliente comparta su experiencia y autorice que aparezca aquí.</p>
+        </div>
+        <div class="testimonial-empty reveal" id="testimonialEmpty">
+          <span class="testimonial-mark" aria-hidden="true">“</span>
+          <span class="testimonial-empty-label" data-site-copy="emptyReviewTitle">ESPACIO PARA EXPERIENCIAS REALES</span>
+          <p data-site-copy="emptyReviewText">Aún no hay comentarios publicados. ¿Ya trabajaste con Andrea? Tu opinión puede ayudar a futuros clientes.</p>
+          <a class="text-link" href="./contacto.html#comentarios"><span data-site-copy="emptyReviewCta">Compartir mi experiencia</span> <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="testimonial-list" id="testimonialList" aria-live="polite"></div>
+        <div class="testimonial-controls" id="testimonialControls" hidden>
+          <button class="testimonial-arrow" id="testimonialPrevious" type="button" aria-label="Comentario anterior">←</button>
+          <div class="testimonial-dots" id="testimonialDots" aria-label="Seleccionar comentario"></div>
+          <button class="testimonial-arrow" id="testimonialNext" type="button" aria-label="Comentario siguiente">→</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="contact wrap" id="contacto">
+      <div class="eyebrow" data-site-copy="contactEyebrow">¿Tienes una idea?</div>
+      <h2><span data-site-copy="contactTitleOne">Hagamos que</span><br><em data-site-copy="contactTitleTwo">se vea increíble.</em></h2>
+      <p data-site-copy="contactCallout">Cuéntame sobre tu marca, proyecto o próxima gran idea.</p>
+      <div class="contact-actions">
+        <a class="button-dark" id="contactWhatsapp" href="https://wa.me/573113352580?text=Hola%20Andrea%2C%20vi%20tu%20portfolio" target="_blank" rel="noreferrer"><span data-site-copy="contactCta">Escríbeme por WhatsApp</span> <span>↗</span></a>
+        <a class="contact-instagram" id="contactInstagram" href="https://www.instagram.com/cardonaa.___12/" target="_blank" rel="noreferrer">Instagram ↗</a>
+        <a class="contact-instagram" href="./contacto.html">Ver opciones de contacto ↗</a>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="footer-inner wrap">
+    <span>© <span id="yearNow"></span> <span data-profile="name">Andrea</span>. <span data-site-copy="footerCredit">Diseñado con intención.</span></span>
+    <div class="footer-socials"><a class="social-link" href="./contacto.html"><span data-site-copy="navContact">Contacto</span><span aria-hidden="true">↗</span></a><a class="social-link" id="instagramLink" href="https://www.instagram.com/cardonaa.___12/" target="_blank" rel="noreferrer" aria-label="Instagram de Andrea"><svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle class="icon-fill" cx="17.6" cy="6.7" r="1"/></svg><span data-site-copy="footerInstagram">Instagram</span><span aria-hidden="true">↗</span></a><a class="social-link" id="whatsappLink" href="https://wa.me/573113352580?text=Hola%20Andrea%2C%20vi%20tu%20portfolio" target="_blank" rel="noreferrer" aria-label="Escribir a Andrea por WhatsApp"><svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 11.8a8.2 8.2 0 0 1-12.1 7.1L3.7 20l1.2-4.2a8.2 8.2 0 1 1 15.3-4Z"/><path d="M9 8.2c.2-.5.5-.5.8-.5h.5c.2 0 .4.1.5.4l.8 1.8c.1.3.1.5-.1.7l-.6.7c-.2.2-.2.4-.1.6.6 1 1.4 1.8 2.5 2.3.2.1.4.1.6-.1l.8-.9c.2-.2.4-.3.7-.2l1.7.8c.3.1.4.3.4.5 0 .5-.2 1.2-.7 1.6-.5.4-1.1.7-2 .5-1.1-.2-2.5-.8-4-2.1-1.2-1-2.1-2.3-2.4-3.3-.3-1.1.1-2.2.6-2.8Z"/></svg><span data-site-copy="footerWhatsapp">WhatsApp</span><span aria-hidden="true">↗</span></a><a class="social-link" id="behanceLink" href="#contacto" hidden><svg class="social-icon behance-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h8a4 4 0 0 1 1.8 7.6A4.3 4.3 0 0 1 10.5 21H3V6Zm4 3v3h3a1.5 1.5 0 0 0 0-3H7Zm0 6v3h3.3a1.5 1.5 0 0 0 0-3H7Zm8-7h6M15 15h6a3 3 0 1 0-6 0Zm0 0a3 3 0 0 0 5.5 1.7"/></svg><span>Behance</span><span aria-hidden="true">↗</span></a></div>
+    <span class="footer-star" aria-hidden="true">✳</span>
+  </div></footer>
+
+  <div class="admin-overlay" id="adminOverlay" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <div class="admin-panel">
+      <aside class="admin-sidebar">
+        <div class="brand"><span class="brand-mark brand-mark-static" aria-hidden="true"><svg viewBox="0 0 100 100"><circle class="brand-star-ring" cx="50" cy="50" r="43"/><path class="brand-star-glyph" d="M50 12 72 82 14 39h72L28 82 50 12Z"/></svg></span><span>Mi espacio</span></div>
+        <p class="admin-label">Administración</p>
+        <div class="admin-nav">
+          <span class="admin-nav-label">PORTFOLIO</span>
+          <button class="admin-tab" data-tab="visual"><span class="admin-tab-icon">✎</span> Editar página</button>
+          <button class="admin-tab active" data-tab="projects"><span class="admin-tab-icon">↗</span> Proyectos</button>
+          <button class="admin-tab" data-tab="new"><span class="admin-tab-icon">＋</span> Nuevo proyecto</button>
+          <button class="admin-tab" data-tab="services"><span class="admin-tab-icon">✳</span> Servicios</button>
+          <span class="admin-nav-label">PERSONALIZACIÓN</span>
+          <button class="admin-tab" data-tab="testimonials"><span class="admin-tab-icon">“</span> Comentarios</button>
+        </div>
+        <div class="admin-sidebar-note"><span class="admin-sidebar-note-mark">⛤</span><p>Edita cada apartado y revisa cómo queda antes de guardar.</p></div>
+      </aside>
+      <section class="admin-main">
+        <div class="admin-header"><div><span class="admin-header-kicker">ESPACIO CREATIVO · ANDREA</span><strong id="adminTitle">Mis proyectos</strong><p id="adminSubtitle">Organiza y actualiza tu portfolio.</p></div><button class="admin-close" id="closeAdmin" aria-label="Cerrar panel">×</button></div>
+        <div class="admin-content" id="adminContent"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="project-dialog" id="projectDialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+    <div class="project-dialog-inner"><button class="project-dialog-close" id="closeProject" aria-label="Cerrar proyecto">×</button><img id="dialogImage" alt=""><div class="project-dialog-copy"><div class="eyebrow" id="dialogCategory"></div><h2 id="dialogTitle"></h2><p id="dialogDescription"></p><span class="project-year" id="dialogYear"></span></div></div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <a class="whatsapp-float" href="https://wa.me/573113352580?text=Hola%20Andrea%2C%20vi%20tu%20portfolio" target="_blank" rel="noreferrer" aria-label="Escríbele a Andrea por WhatsApp">
+    <span class="whatsapp-float-label">¿Hablamos de tu proyecto?</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 11.8a8.2 8.2 0 0 1-12.1 7.1L3.7 20l1.2-4.2a8.2 8.2 0 1 1 15.3-4Z"/><path d="M9 8.2c.2-.5.5-.5.8-.5h.5c.2 0 .4.1.5.4l.8 1.8c.1.3.1.5-.1.7l-.6.7c-.2.2-.2.4-.1.6.6 1 1.4 1.8 2.5 2.3.2.1.4.1.6-.1l.8-.9c.2-.2.4-.3.7-.2l1.7.8c.3.1.4.3.4.5 0 .5-.2 1.2-.7 1.6-.5.4-1.1.7-2 .5-1.1-.2-2.5-.8-4-2.1-1.2-1-2.1-2.3-2.4-3.3-.3-1.1.1-2.2.6-2.8Z"/></svg>
+  </a>
+
+  <script src="./supabase-config.js" defer></script>
+  <script src="./script.js" defer></script>
+</body>
+</html>

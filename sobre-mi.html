@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111112">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <meta name="description" content="Conoce a Andrea, diseñadora gráfica independiente enfocada en identidad visual, branding y dirección de arte.">
+  <title>Sobre mí — Andrea, diseñadora gráfica</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="interior-page">
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+  <header class="topbar">
+    <nav class="nav wrap" aria-label="Navegación principal">
+      <div class="brand">
+        <a class="brand-mark" href="./index.html" aria-label="Andrea, inicio"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="brand-star-ring" cx="50" cy="50" r="43"/><path class="brand-star-glyph" d="M50 12 72 82 14 39h72L28 82 50 12Z"/></svg></a>
+        <div class="brand-lockup"><a class="brand-name" href="./index.html" data-profile="name">ANDREA</a><span class="brand-caption">DISEÑO GRÁFICO</span></div>
+      </div>
+      <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">☰</button>
+      <div class="nav-links" id="navLinks">
+        <a href="./proyectos.html" data-site-copy="navProjects">Proyectos</a><a href="./servicios.html" data-site-copy="navServices">Servicios</a><a href="./sobre-mi.html" aria-current="page" data-site-copy="navAbout">Sobre mí</a><a href="./contacto.html" data-site-copy="navContact">Contacto</a>
+        <a class="nav-cta" href="https://wa.me/573113352580" target="_blank" rel="noreferrer"><span data-site-copy="navCta">Hablemos</span> <span aria-hidden="true">↗</span></a>
+      </div>
+    </nav>
+  </header>
+  <main>
+    <section class="interior-hero wrap">
+      <div class="eyebrow reveal" data-site-copy="aboutPageEyebrow">Perfil / Andrea</div>
+      <div class="interior-hero-grid">
+        <h1 class="reveal"><span data-site-copy="aboutPageTitleOne">DISEÑAR ES</span><br><em data-site-copy="aboutPageTitleTwo">ENCONTRAR LA VOZ.</em></h1>
+        <p class="interior-lead reveal" data-profile="bio">Soy diseñadora gráfica y convierto ideas en sistemas visuales con personalidad. Trabajo entre el branding, la dirección de arte y el diseño editorial, con una estética contemporánea, oscura y llena de intención.</p>
+      </div>
+      <div class="interior-meta reveal"><span data-profile="role">DISEÑADORA GRÁFICA INDEPENDIENTE</span><span data-site-copy="aboutMetaTwo">IDEAS · IMAGEN · SISTEMAS</span><a href="./proyectos.html"><span data-site-copy="aboutMetaLink">Ver proyectos</span> ↗</a></div>
+    </section>
+    <section class="profile-feature">
+      <div class="wrap profile-feature-grid">
+        <div class="profile-portrait reveal"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85" alt="Retrato de referencia para Andrea, diseñadora gráfica"></div>
+        <div class="profile-note reveal"><span class="eyebrow" data-site-copy="aboutFeatureEyebrow">Mi mirada</span><h2><span data-site-copy="aboutFeatureTitleOne">Concepto primero.</span><br><em data-site-copy="aboutFeatureTitleTwo">Forma con sentido.</em></h2><p data-site-copy="aboutIntro">Me interesa el diseño que tiene intención: una idea clara, decisiones visuales coherentes y detalles que hacen que una marca se sienta propia. Mi lenguaje combina contraste, tipografía y una sensibilidad editorial.</p><div class="profile-signature">ANDREA <span>DISEÑO GRÁFICO</span></div></div>
+      </div>
+    </section>
+    <section class="values-section">
+      <div class="wrap">
+        <div class="section-heading reveal"><div><div class="eyebrow" data-site-copy="aboutValuesEyebrow">Lo que guía mi trabajo</div><h2><span data-site-copy="aboutValuesTitleOne">Diseño con</span><br><em data-site-copy="aboutValuesTitleTwo">dirección.</em></h2></div><p class="section-aside" data-site-copy="aboutValues">No se trata solo de que algo se vea bien. Se trata de que comunique con claridad y permanezca en la memoria.</p></div>
+        <div class="values-grid">
+          <article class="value-card reveal"><span>01 / IDEA</span><h3 data-site-copy="valueOneTitle">Concepto</h3><p data-site-copy="valueOneText">Una buena solución visual empieza por entender el problema y encontrar una idea que lo ordene.</p></article>
+          <article class="value-card reveal"><span>02 / VOZ</span><h3 data-site-copy="valueTwoTitle">Personalidad</h3><p data-site-copy="valueTwoText">La identidad se construye con decisiones consistentes, no con adornos que siguen una tendencia.</p></article>
+          <article class="value-card reveal"><span>03 / CUIDADO</span><h3 data-site-copy="valueThreeTitle">Detalle</h3><p data-site-copy="valueThreeText">Tipografía, ritmo, contraste y composición hacen que cada elemento tenga un lugar y un propósito.</p></article>
+        </div>
+      </div>
+    </section>
+    <section class="archive-note"><div class="wrap archive-note-inner"><span class="eyebrow" data-site-copy="aboutOutro">¿Creamos algo juntxs?</span><a class="button-dark" href="./contacto.html"><span data-site-copy="aboutOutroCta">Hablemos de tu proyecto</span> <span>↗</span></a></div></section>
+  </main>
+  <footer><div class="footer-inner wrap">
+    <span>© <span id="yearNow"></span> <span data-profile="name">Andrea</span>. <span data-site-copy="footerCredit">Diseñado con intención.</span></span>
+    <div class="footer-socials"><a class="social-link" href="./contacto.html"><span data-site-copy="navContact">Contacto</span><span aria-hidden="true">↗</span></a><a class="social-link" id="instagramLink" href="https://www.instagram.com/cardonaa.___12/" target="_blank" rel="noreferrer" aria-label="Instagram de Andrea"><svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle class="icon-fill" cx="17.6" cy="6.7" r="1"/></svg><span data-site-copy="footerInstagram">Instagram</span><span aria-hidden="true">↗</span></a><a class="social-link" href="https://wa.me/573113352580" target="_blank" rel="noreferrer" aria-label="Escribir a Andrea por WhatsApp"><svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 11.8a8.2 8.2 0 0 1-12.1 7.1L3.7 20l1.2-4.2a8.2 8.2 0 1 1 15.3-4Z"/><path d="M9 8.2c.2-.5.5-.5.8-.5h.5c.2 0 .4.1.5.4l.8 1.8c.1.3.1.5-.1.7l-.6.7c-.2.2-.2.4-.1.6.6 1 1.4 1.8 2.5 2.3.2.1.4.1.6-.1l.8-.9c.2-.2.4-.3.7-.2l1.7.8c.3.1.4.3.4.5 0 .5-.2 1.2-.7 1.6-.5.4-1.1.7-2 .5-1.1-.2-2.5-.8-4-2.1-1.2-1-2.1-2.3-2.4-3.3-.3-1.1.1-2.2.6-2.8Z"/></svg><span data-site-copy="footerWhatsapp">WhatsApp</span><span aria-hidden="true">↗</span></a></div><span class="footer-star" aria-hidden="true">✳</span>
+  </div></footer>
+  <script src="./supabase-config.js" defer></script>
+  <script src="./script.js" defer></script>
+</body>
+</html>
