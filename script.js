@@ -202,7 +202,7 @@
       const supabase = window.ANDREA_SUPABASE || {};
       const SUPABASE_SESSION_KEY = "andrea-portfolio-admin-session";
       const VISUAL_EDIT_SESSION_KEY = "andrea-portfolio-visual-editing";
-      const state = { db: null, projects: [], testimonials: [], remoteReviewsLoaded: false, services: [...defaultServices], siteCopy: {}, profile: { ...defaultProfile }, filter: "Todos", projectIndex: 0, projectCarouselTimer: null, editingId: null, editingTestimonialId: null, editingServiceId: null, toastTimer: null, testimonialIndex: 0, testimonialTimer: null, testimonialObjectUrls: [], testimonialAdminObjectUrls: [] };
+      const state = { db: null, projects: [], testimonials: [], remoteReviewsLoaded: false, services: [...defaultServices], siteCopy: {}, profile: { ...defaultProfile }, filter: "Todos", projectIndex: 0, projectCarouselTimer: null, projectImageTimers: new Map(), projectImageTransitionTimers: new Map(), projectDialogTimer: null, projectDialogTransitionTimer: null, editingId: null, editingTestimonialId: null, editingServiceId: null, toastTimer: null, testimonialIndex: 0, testimonialTimer: null, testimonialObjectUrls: [], testimonialAdminObjectUrls: [] };
       state.visualCopy = {};
       state.visualImages = {};
       state.visualLinks = {};
@@ -670,9 +670,47 @@
         try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) ? url.href : fallback; }
         catch { return fallback; }
       }
+      function stopProjectImageRotation(card) {
+        const timer = state.projectImageTimers.get(card);
+        const transitionTimer = state.projectImageTransitionTimers.get(card);
+        if (timer) window.clearInterval(timer);
+        if (transitionTimer) window.clearTimeout(transitionTimer);
+        state.projectImageTimers.delete(card);
+        state.projectImageTransitionTimers.delete(card);
+        $(".project-image img", card)?.classList.remove("is-transitioning");
+      }
+      function stopAllProjectImageRotations() {
+        state.projectImageTimers.forEach((timer, card) => {
+          window.clearInterval(timer);
+          const image = $(".project-image img", card);
+          image?.classList.remove("is-transitioning");
+        });
+        state.projectImageTransitionTimers.forEach(timer => window.clearTimeout(timer));
+        state.projectImageTimers.clear();
+        state.projectImageTransitionTimers.clear();
+      }
+      function startProjectImageRotation(card, project) {
+        stopProjectImageRotation(card);
+        const images = [project.image, ...(Array.isArray(project.images) ? project.images : [])].filter(Boolean);
+        if (images.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.body.classList.contains("visual-edit-mode")) return;
+        const image = $(".project-image img", card);
+        if (!image) return;
+        let currentIndex = 0;
+        state.projectImageTimers.set(card, window.setInterval(() => {
+          currentIndex = (currentIndex + 1) % images.length;
+          image.classList.add("is-transitioning");
+          state.projectImageTransitionTimers.set(card, window.setTimeout(() => {
+            image.src = images[currentIndex];
+            image.alt = `${project.title}, imagen ${currentIndex + 1}`;
+            image.classList.remove("is-transitioning");
+            state.projectImageTransitionTimers.delete(card);
+          }, 350));
+        }, 4000));
+      }
       function renderProjects() {
         const grid = $("#projectsGrid");
         if (!grid) return;
+        stopAllProjectImageRotations();
         const isHomeCarousel = visualPageKey() === "index.html";
         grid.classList.toggle("home-project-carousel", isHomeCarousel);
         const carouselControls = $("#projectCarouselControls");
@@ -726,6 +764,7 @@
           const year = document.createElement("span"); year.className = "project-year"; year.textContent = project.year; year.dataset.projectId = project.id; year.dataset.projectField = "year";
           meta.append(text, year);
           card.append(image, meta);
+          if (!isHomeCarousel || index === state.projectIndex) startProjectImageRotation(card, project);
           card.addEventListener("click", () => openProject(project));
           card.setAttribute("tabindex", "0");
           card.setAttribute("role", "button");
@@ -736,9 +775,7 @@
         });
         if (isHomeCarousel) {
           renderProjectCarousel(projects.length);
-          if (projects.length > 1 && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            state.projectCarouselTimer = window.setInterval(() => showProject(state.projectIndex + 1), 6500);
-          }
+          scheduleProjectAdvance();
         }
       }
       function renderProjectCarousel(count) {
@@ -767,6 +804,18 @@
           });
         }
       }
+      function scheduleProjectAdvance() {
+        window.clearTimeout(state.projectCarouselTimer);
+        const cards = $$(".project-carousel-card", $("#projectsGrid"));
+        if (cards.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const activeCard = cards[state.projectIndex];
+        const project = state.projects.find(item => item.id === activeCard?.dataset.projectId);
+        const imageCount = project
+          ? [project.image, ...(Array.isArray(project.images) ? project.images : [])].filter(Boolean).length
+          : 1;
+        const displayTime = Math.max(10000, imageCount * 4000);
+        state.projectCarouselTimer = window.setTimeout(() => showProject(state.projectIndex + 1), displayTime);
+      }
       function showProject(index) {
         const cards = $$(".project-carousel-card", $("#projectsGrid"));
         if (!cards.length) return;
@@ -776,12 +825,17 @@
           card.hidden = !active;
           card.setAttribute("aria-hidden", String(!active));
           card.classList.toggle("active", active);
+          if (active) {
+            const project = state.projects.find(item => item.id === card.dataset.projectId);
+            if (project) startProjectImageRotation(card, project);
+          } else stopProjectImageRotation(card);
         });
         $$(".testimonial-dot", $("#projectDots")).forEach((dot, position) => {
           const active = position === state.projectIndex;
           dot.classList.toggle("active", active);
           dot.setAttribute("aria-current", String(active));
         });
+        scheduleProjectAdvance();
       }
       function renderServices() {
         const grid = $("#serviceGrid");
@@ -974,33 +1028,53 @@
       }
       function openProject(project) {
         if (!dialog) return;
+        window.clearInterval(state.projectDialogTimer);
+        window.clearTimeout(state.projectDialogTransitionTimer);
         const galleryImages = [project.image, ...(Array.isArray(project.images) ? project.images : [])].filter(Boolean);
         const mainImage = $("#dialogImage");
+        const gallery = $("#projectGallery");
+        const galleryGrid = $("#dialogGallery");
+        let currentImageIndex = 0;
+        mainImage.classList.remove("is-transitioning");
         mainImage.src = galleryImages[0] || "";
         mainImage.alt = project.title;
         mainImage.dataset.projectImage = project.id;
-        const gallery = $("#projectGallery");
-        const galleryGrid = $("#dialogGallery");
         galleryGrid.replaceChildren();
         galleryImages.forEach((imageUrl, index) => {
           const button = document.createElement("button");
           button.type = "button";
           button.className = "project-gallery-thumb";
           button.setAttribute("aria-label", `Ver imagen ${index + 1} de ${galleryImages.length} de ${project.title}`);
-          button.setAttribute("aria-pressed", String(index === 0));
+          button.setAttribute("aria-pressed", String(index === currentImageIndex));
           const image = document.createElement("img");
           image.src = imageUrl;
           image.alt = `${project.title}, imagen ${index + 1}`;
-          image.dataset.projectImage = project.id;
           button.append(image);
           button.addEventListener("click", () => {
+            currentImageIndex = index;
             mainImage.src = imageUrl;
             mainImage.alt = image.alt;
-            galleryGrid.querySelectorAll(".project-gallery-thumb").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+            galleryGrid.querySelectorAll(".project-gallery-thumb").forEach((item, position) => {
+              item.setAttribute("aria-pressed", String(position === currentImageIndex));
+            });
           });
           galleryGrid.append(button);
         });
         gallery.hidden = galleryImages.length < 2;
+        if (galleryImages.length > 1 && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          state.projectDialogTimer = window.setInterval(() => {
+            currentImageIndex = (currentImageIndex + 1) % galleryImages.length;
+            galleryGrid.querySelectorAll(".project-gallery-thumb").forEach((item, index) => {
+              item.setAttribute("aria-pressed", String(index === currentImageIndex));
+            });
+            mainImage.classList.add("is-transitioning");
+            state.projectDialogTransitionTimer = window.setTimeout(() => {
+              mainImage.src = galleryImages[currentImageIndex];
+              mainImage.alt = `${project.title}, imagen ${currentImageIndex + 1}`;
+              mainImage.classList.remove("is-transitioning");
+            }, 350);
+          }, 4000);
+        }
         $("#dialogCategory").textContent = project.category;
         $("#dialogCategory").dataset.projectId = project.id;
         $("#dialogCategory").dataset.projectField = "category";
@@ -1022,7 +1096,13 @@
         document.body.classList.add("locked");
         $("#closeProject").focus();
       }
-      function closeProject() { if (dialog) dialog.classList.remove("open"); document.body.classList.remove("locked"); }
+      function closeProject() {
+        if (dialog) dialog.classList.remove("open");
+        window.clearInterval(state.projectDialogTimer);
+        window.clearTimeout(state.projectDialogTransitionTimer);
+        $("#dialogImage")?.classList.remove("is-transitioning");
+        document.body.classList.remove("locked");
+      }
       const visualPages = [
         ["Inicio", "./index.html"],
         ["Proyectos", "./proyectos.html"],
@@ -1169,6 +1249,7 @@
         try { sessionStorage.setItem(VISUAL_EDIT_SESSION_KEY, "1"); }
         catch (error) { showToast(`No se pudo activar la edición visual: ${error.message}`, true); return; }
         window.clearInterval(state.projectCarouselTimer);
+        stopAllProjectImageRotations();
         closeAdmin();
         document.body.classList.add("visual-edit-mode");
         state.visualPending = { copy: {}, profile: {}, projects: {}, services: {}, content: {}, images: {}, imageStyles: {}, links: {} };
