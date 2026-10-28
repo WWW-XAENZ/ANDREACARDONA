@@ -383,7 +383,11 @@
             key: "siteContentSyncPending",
             value: { pending: true, updatedAt: Date.now() }
           }));
-          state.projects = await Promise.all(state.projects.map(async project => ({ ...project, image: await publicImage(project.image) })));
+          state.projects = await Promise.all(state.projects.map(async project => ({
+            ...project,
+            image: await publicImage(project.image),
+            images: await Promise.all((Array.isArray(project.images) ? project.images : []).map(publicImage))
+          })));
           state.profile = { ...state.profile, portrait: await publicImage(state.profile.portrait) };
           state.visualImages = Object.fromEntries(await Promise.all(Object.entries(state.visualImages).map(async ([page, images]) => [
             page,
@@ -970,9 +974,33 @@
       }
       function openProject(project) {
         if (!dialog) return;
-        $("#dialogImage").src = project.image || "";
-        $("#dialogImage").alt = project.title;
-        $("#dialogImage").dataset.projectImage = project.id;
+        const galleryImages = [project.image, ...(Array.isArray(project.images) ? project.images : [])].filter(Boolean);
+        const mainImage = $("#dialogImage");
+        mainImage.src = galleryImages[0] || "";
+        mainImage.alt = project.title;
+        mainImage.dataset.projectImage = project.id;
+        const gallery = $("#projectGallery");
+        const galleryGrid = $("#dialogGallery");
+        galleryGrid.replaceChildren();
+        galleryImages.forEach((imageUrl, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "project-gallery-thumb";
+          button.setAttribute("aria-label", `Ver imagen ${index + 1} de ${galleryImages.length} de ${project.title}`);
+          button.setAttribute("aria-pressed", String(index === 0));
+          const image = document.createElement("img");
+          image.src = imageUrl;
+          image.alt = `${project.title}, imagen ${index + 1}`;
+          image.dataset.projectImage = project.id;
+          button.append(image);
+          button.addEventListener("click", () => {
+            mainImage.src = imageUrl;
+            mainImage.alt = image.alt;
+            galleryGrid.querySelectorAll(".project-gallery-thumb").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+          });
+          galleryGrid.append(button);
+        });
+        gallery.hidden = galleryImages.length < 2;
         $("#dialogCategory").textContent = project.category;
         $("#dialogCategory").dataset.projectId = project.id;
         $("#dialogCategory").dataset.projectField = "category";
@@ -982,6 +1010,11 @@
         $("#dialogDescription").textContent = project.description || "";
         $("#dialogDescription").dataset.projectId = project.id;
         $("#dialogDescription").dataset.projectField = "description";
+        const details = $("#dialogDetails");
+        details.hidden = !project.details;
+        $("#dialogDetailsText").textContent = project.details || "";
+        $("#dialogDetailsText").dataset.projectId = project.id;
+        $("#dialogDetailsText").dataset.projectField = "details";
         $("#dialogYear").textContent = project.year || "";
         $("#dialogYear").dataset.projectId = project.id;
         $("#dialogYear").dataset.projectField = "year";
@@ -1740,12 +1773,16 @@
             <div class="field"><label for="projectYear">Año</label><input id="projectYear" name="year" maxlength="4" value="${escapeAttribute(project?.year || new Date().getFullYear())}" placeholder="2026"></div>
             <div class="field"><label for="projectImageUrl">Enlace a imagen (opcional)</label><input id="projectImageUrl" name="imageUrl" type="url" value="${project && !project.image?.startsWith("data:") ? escapeAttribute(project.image) : ""}" placeholder="https://..."></div>
             <div class="field full"><label for="projectDescription">Cuéntame sobre el proyecto</label><textarea id="projectDescription" name="description" maxlength="1000" placeholder="Concepto, proceso y decisiones gráficas...">${escapeHtml(project?.description || "")}</textarea></div>
+            <div class="field full"><label for="projectDetails">Información adicional</label><textarea id="projectDetails" name="details" maxlength="2000" placeholder="Proceso, objetivo, herramientas, resultados...">${escapeHtml(project?.details || "")}</textarea></div>
             <div class="field full"><label for="projectImage">Subir imagen de portada</label><div class="upload-box"><input id="projectImage" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><div class="upload-help">JPG, PNG, WebP o GIF. Máximo 8 MB.</div></div></div>
+            <div class="field full"><label for="projectGalleryImages">Agregar más imágenes</label><div class="upload-box"><input id="projectGalleryImages" name="galleryImages" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><div class="upload-help">Puedes seleccionar varias imágenes a la vez. Máximo 8 MB por imagen.</div><div class="admin-gallery-preview" id="projectGalleryPreview"></div></div></div>
+            <div class="field full"><label for="projectGalleryUrls">Enlaces a más imágenes (opcional)</label><textarea id="projectGalleryUrls" name="galleryUrls" maxlength="4000" placeholder="Pega un enlace por línea">${escapeHtml((Array.isArray(project?.images) ? project.images : []).filter(image => !image.startsWith("data:")).join("\n"))}</textarea></div>
             <section class="admin-live-preview"><span>VISTA PREVIA DEL PROYECTO</span><article class="project-card admin-preview-project"><div class="project-image"><img id="previewProjectImage" alt=""></div><div class="project-meta"><div><h3 id="previewProjectTitle"></h3><p id="previewProjectCategory"></p></div><span class="project-year" id="previewProjectYear"></span></div><p class="admin-preview-description" id="previewProjectDescription"></p></article></section>
             <div class="form-actions"><button class="admin-button" type="submit">${project ? "Guardar cambios" : "Publicar proyecto"}</button><button class="admin-button secondary" type="button" data-action="cancel">Cancelar</button></div>
           </form>`;
         const form = $("#projectForm");
         let previewUrl = project?.image || "";
+        const selectedGalleryPreviews = [];
         const updatePreview = () => {
           $("#previewProjectTitle").textContent = form.elements.title.value || "Nombre del proyecto";
           $("#previewProjectCategory").textContent = form.elements.category.value || "Categoría";
@@ -1761,6 +1798,29 @@
             try { previewUrl = await readImage(file); updatePreview(); }
             catch (error) { showToast(error.message, true); }
           }
+        });
+        form.elements.galleryImages.addEventListener("change", async event => {
+          const files = Array.from(event.currentTarget.files);
+          if (files.some(file => file.size > 8 * 1024 * 1024)) {
+            showToast("Cada imagen de la galería debe pesar máximo 8 MB.", true);
+            event.currentTarget.value = "";
+            return;
+          }
+          if (files.some(file => !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type))) {
+            showToast("Usa imágenes JPG, PNG, WebP o GIF.", true);
+            event.currentTarget.value = "";
+            return;
+          }
+          try {
+            selectedGalleryPreviews.splice(0, selectedGalleryPreviews.length, ...await Promise.all(files.map(readImage)));
+            const preview = $("#projectGalleryPreview");
+            preview.replaceChildren(...selectedGalleryPreviews.map((src, index) => {
+              const image = document.createElement("img");
+              image.src = src;
+              image.alt = `Vista previa de imagen ${index + 1}`;
+              return image;
+            }));
+          } catch (error) { showToast(error.message, true); }
         });
         bindLivePreview(form, updatePreview);
         form.addEventListener("submit", saveProject);
@@ -1821,18 +1881,34 @@
         const file = data.get("image");
         if (file instanceof File && file.size > 8 * 1024 * 1024) { showToast("La imagen supera el límite de 8 MB.", true); return; }
         if (file instanceof File && file.size && !file.type.startsWith("image/")) { showToast("Selecciona un archivo de imagen válido.", true); return; }
+        const galleryFiles = data.getAll("galleryImages").filter(item => item instanceof File && item.size);
+        if (galleryFiles.some(item => item.size > 8 * 1024 * 1024)) { showToast("Cada imagen de la galería debe pesar máximo 8 MB.", true); return; }
+        if (galleryFiles.some(item => !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(item.type))) { showToast("Usa imágenes JPG, PNG, WebP o GIF en la galería.", true); return; }
         const old = state.projects.find(project => project.id === state.editingId);
         let image = old?.image || "";
         if (file instanceof File && file.size) image = await readImage(file);
         if (!image && data.get("imageUrl")) image = safeUrl(String(data.get("imageUrl")), "");
         if (!image) { showToast("Añade una imagen de portada o un enlace válido.", true); return; }
+        const galleryUrls = String(data.get("galleryUrls") || "").split(/\r?\n/).map(url => url.trim()).filter(Boolean);
+        const safeGalleryUrls = galleryUrls.map(url => safeUrl(url, ""));
+        if (safeGalleryUrls.some(url => !url)) { showToast("Revisa los enlaces de imágenes: deben ser direcciones HTTP o HTTPS válidas.", true); return; }
+        let images;
+        try {
+          images = [
+            ...(Array.isArray(old?.images) ? old.images : []).filter(url => url.startsWith("data:")),
+            ...safeGalleryUrls,
+            ...await Promise.all(galleryFiles.map(readImage))
+          ];
+        } catch (error) { showToast(error.message, true); return; }
         const project = {
           id: old?.id || (crypto.randomUUID ? crypto.randomUUID() : `p-${Date.now()}`),
           title: String(data.get("title")).trim(),
           category: String(data.get("category")).trim(),
           year: String(data.get("year")).trim(),
           description: String(data.get("description")).trim(),
+          details: String(data.get("details")).trim(),
           image,
+          images,
           order: old?.order || Date.now()
         };
         try {
